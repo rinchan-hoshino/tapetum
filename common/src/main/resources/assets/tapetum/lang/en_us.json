@@ -1,0 +1,19 @@
+{
+  "tapetum.config.title": "Tapetum Settings",
+  "tapetum.config.status.writer": "Iris 54B Direct Writer: %s",
+  "tapetum.config.status.active": "Active",
+  "tapetum.config.status.standby": "Standby",
+  "tapetum.config.status.adapters": "Detected Adapters: %s",
+  "tapetum.config.status.meshes": "Pre-baked Meshes: %s",
+  "tapetum.config.vanillaModelPart54B": "Vanilla ModelPart 54B",
+  "tapetum.config.enchantedGlintFastWriter": "Enchanted Glint Fast Writer",
+  "tapetum.config.geckolibFast54B": "GeckoLib 4 Fast 54B",
+  "tapetum.config.azurelibFast54B": "AzureLib Fast 54B",
+  "tapetum.config.taczFastRender": "TaCZ Fast Render",
+  "tapetum.config.maidAndBedrockFastRender": "Maid & Bedrock Fast Render",
+  "tapetum.config.slashBladeFastRender": "SlashBlade Fast Render",
+  "tapetum.config.smartShadowCulling": "Smart Shadow Culling",
+  "tapetum.config.shadowCullDistance": "Shadow Cull Distance: %s blocks",
+  "tapetum.config.reset": "Reset",
+  "tapetum.config.saveAndDone": "Save & Done"
+}

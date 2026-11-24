@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": [
+    "${mod_authors}"
+  ],
+  "license": "${mod_license}",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.rinchan.tapetum.fabric.TapetumFabric"
+    ],
+    "client": [
+      "dev.rinchan.tapetum.fabric.TapetumFabricClient"
+    ],
+    "modmenu": [
+      "dev.rinchan.tapetum.fabric.TapetumModMenu"
+    ]
+  },
+  "mixins": [
+    "tapetum.mixins.json",
+    "tapetum.fabric.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${fabric_loader_min_version}",
+    "minecraft": "${minecraft_version}",
+    "java": ">=${java_version}"
+  },
+  "suggests": {
+    "sodium": "*",
+    "iris": "*"
+  },
+  "icon": "assets/tapetum/icon.png",
+  "contact": {
+    "homepage": "https://modrinth.com/mod/tapetum",
+    "sources": "https://github.com/rinchan-hoshino/tapetum",
+    "issues": "https://github.com/rinchan-hoshino/tapetum/issues"
+  }
+}

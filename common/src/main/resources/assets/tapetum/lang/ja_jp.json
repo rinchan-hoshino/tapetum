@@ -1,0 +1,19 @@
+{
+  "tapetum.config.title": "Tapetum 設定",
+  "tapetum.config.status.writer": "Iris 54B ダイレクトライタ: %s",
+  "tapetum.config.status.active": "有効",
+  "tapetum.config.status.standby": "待機中",
+  "tapetum.config.status.adapters": "検出アダプタ: %s",
+  "tapetum.config.status.meshes": "事前ベイク済みメッシュ: %s",
+  "tapetum.config.vanillaModelPart54B": "バニラ ModelPart 54B",
+  "tapetum.config.enchantedGlintFastWriter": "エンチャント光沢高速書き込み",
+  "tapetum.config.geckolibFast54B": "GeckoLib 4 高速 54B",
+  "tapetum.config.azurelibFast54B": "AzureLib 高速 54B",
+  "tapetum.config.taczFastRender": "TaCZ 高速描画",
+  "tapetum.config.maidAndBedrockFastRender": "メイド＆Bedrock高速描画",
+  "tapetum.config.slashBladeFastRender": "抜刀剣高速描画",
+  "tapetum.config.smartShadowCulling": "スマートシャドウカリング",
+  "tapetum.config.shadowCullDistance": "シャドウカリング距離: %s ブロック",
+  "tapetum.config.reset": "リセット",
+  "tapetum.config.saveAndDone": "保存して完了"
+}

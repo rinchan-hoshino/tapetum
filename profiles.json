@@ -1,0 +1,10 @@
+{
+  "1.21.1": {
+    "java": 21,
+    "api": "v121",
+    "loaders": ["fabric", "neoforge"],
+    "neo": "21.1.250",
+    "range": "[1.21.1,1.21.2)",
+    "fabric_range": "~1.21.1"
+  }
+}

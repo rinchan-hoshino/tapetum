@@ -1,0 +1,19 @@
+{
+  "tapetum.config.title": "Tapetum 设置",
+  "tapetum.config.status.writer": "Iris 54B 直写器：%s",
+  "tapetum.config.status.active": "已激活",
+  "tapetum.config.status.standby": "待命中",
+  "tapetum.config.status.adapters": "已识别适配器：%s",
+  "tapetum.config.status.meshes": "预烘焙网格：%s",
+  "tapetum.config.vanillaModelPart54B": "原版模型部件 54B 直写",
+  "tapetum.config.enchantedGlintFastWriter": "附魔光效快速写入",
+  "tapetum.config.geckolibFast54B": "GeckoLib 4 54B 加速",
+  "tapetum.config.azurelibFast54B": "AzureLib 54B 加速",
+  "tapetum.config.taczFastRender": "TaCZ 枪械渲染加速",
+  "tapetum.config.maidAndBedrockFastRender": "女仆与基岩模型加速",
+  "tapetum.config.slashBladeFastRender": "拔刀剑渲染加速",
+  "tapetum.config.smartShadowCulling": "智能阴影剔除",
+  "tapetum.config.shadowCullDistance": "阴影剔除距离：%s 格",
+  "tapetum.config.reset": "重置默认",
+  "tapetum.config.saveAndDone": "保存并完成"
+}
