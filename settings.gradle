@@ -20,7 +20,7 @@ def profile = profiles[mcVersion]
 if (profile == null) throw new GradleException("Unsupported Minecraft profile: ${mcVersion}")
 
 def selectedLoader = providers.gradleProperty('loader').getOrElse('all')
-if (!(selectedLoader in ['all', 'fabric', 'neoforge'])) {
+if (!(selectedLoader in ['all', 'fabric', 'forge', 'neoforge'])) {
     throw new GradleException("Unsupported loader: ${selectedLoader}")
 }
 

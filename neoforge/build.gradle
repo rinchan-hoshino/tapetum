@@ -12,49 +12,29 @@ base {
     archivesName = "${modId}-neoforge"
 }
 
-def localClasspathDir = file('/Users/rin/.rin/Projects/watermelon-field-bulrush/mod-sources/watermelon-field/build/classpath')
-def extractedJijDir = layout.buildDirectory.dir('extracted-jij').get().asFile
-
-def extractJij = { String outerJarName, String innerPath, String outName ->
-    File outer = new File(localClasspathDir, outerJarName)
-    File outFile = new File(extractedJijDir, outName)
-    if (outer.exists() && (!outFile.exists() || outFile.lastModified() < outer.lastModified())) {
-        extractedJijDir.mkdirs()
-        def zf = new java.util.zip.ZipFile(outer)
-        try {
-            def entry = zf.getEntry(innerPath)
-            if (entry != null) {
-                zf.getInputStream(entry).withCloseable { ins ->
-                    outFile.withOutputStream { outs -> ins.transferTo(outs) }
-                }
-            }
-        } finally {
-            zf.close()
-        }
+sourceSets {
+    compatStub {
+        java.srcDir root.file("common/src/compatStub_${apiLayer}/java")
     }
-    return outFile
 }
 
-def modCompileJars = [
-    new File(localClasspathDir, 'sodium-neoforge-0.8.13+mc1.21.1.jar'),
-    extractJij('sodium-neoforge-0.8.13+mc1.21.1.jar', 'META-INF/jarjar/net.caffeinemc.sodium-neoforge-0.8.13+mc1.21.1-mod.jar', 'sodium-mod.jar'),
-    new File(localClasspathDir, 'iris-neoforge-1.8.14-beta.1+mc1.21.1.jar'),
-    new File(localClasspathDir, 'geckolib-neoforge-1.21.1-4.9.3.jar'),
-    new File(localClasspathDir, 'azurelib-neo-1.21.1-3.2.8.jar'),
-    new File(localClasspathDir, 'tacz-neoforge-1.21.1-1.2.0.jar'),
-    extractJij('tacz-neoforge-1.21.1-1.2.0.jar', 'META-INF/jarjar/simplebedrockmodel-2.6.2-neoforge-mc1.21.1.jar', 'simplebedrockmodel-v2.jar'),
-    new File(localClasspathDir, 'touhoulittlemaid-1.5.3-neoforge+mc1.21.1.jar'),
-    new File(localClasspathDir, 'SlashBladeResharped-2.1.9-1.21.1.jar'),
-    new File(localClasspathDir, 'kaleidoscopedoll-1.4.2-neoforge+mc1.21.1.jar'),
-].findAll { it.exists() }
-
 sourceSets.main.java.srcDir root.file('common/src/main/java')
+if (apiLayer.startsWith('v26')) {
+    sourceSets.main.java.srcDir root.file('common/src/v26/java')
+    sourceSets.main.resources.srcDir root.file('common/src/v26/resources')
+    sourceSets.main.java.srcDir file('src/v26/java')
+    sourceSets.main.resources.srcDir file('src/v26/resources')
+}
 sourceSets.main.java.srcDir root.file("common/src/${apiLayer}/java")
 sourceSets.main.resources.srcDir root.file('common/src/main/resources')
 sourceSets.main.resources.srcDir root.file("common/src/${apiLayer}/resources")
+sourceSets.main.java.srcDir file("src/${apiLayer}/java")
+sourceSets.main.resources.srcDir file("src/${apiLayer}/resources")
+sourceSets.main.compileClasspath += sourceSets.compatStub.output
+
 sourceSets.test.java.srcDir root.file('common/src/test/java')
-sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
-sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath + sourceSets.compatStub.output
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.compatStub.output
 
 sourceSets.main.resources.srcDir tasks.register('generateModMetadata', ProcessResources) {
     def replaceProperties = [
@@ -67,7 +47,7 @@ sourceSets.main.resources.srcDir tasks.register('generateModMetadata', ProcessRe
         mod_version            : root.property('mod_version'),
         mod_authors            : root.property('mod_authors'),
         mod_description        : root.property('mod_description'),
-        icon_property          : 'logoFile'
+        icon_property          : root.minecraft_version in ['26.2', '26.3'] ? 'iconFile' : 'logoFile'
     ]
     inputs.properties replaceProperties
     filteringCharset = 'UTF-8'
@@ -102,25 +82,30 @@ neoForge {
 neoForge.ideSyncTask tasks.named('generateModMetadata')
 
 dependencies {
-    compileOnly files(modCompileJars)
-    compileOnly 'com.bawnorton.mixinsquared:mixinsquared-common:0.2.0'
-    testImplementation files(modCompileJars)
+    if (apiLayer == 'v121') {
+        compileOnly 'com.bawnorton.mixinsquared:mixinsquared-common:0.2.0'
+    }
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+sourceSets.compatStub.compileClasspath = configurations.compileClasspath
+
 def jarArchiveFile = tasks.named('jar').flatMap { it.archiveFile }
-def cpDirPath = localClasspathDir.absolutePath
-def jijDirPath = extractedJijDir.absolutePath
+def releasesDirPath = rootProject.layout.projectDirectory.dir('build/releases').asFile.absolutePath
 
 tasks.named('test', Test) {
     dependsOn tasks.named('jar')
     useJUnitPlatform()
     doFirst {
         systemProperty 'tapetum.packagedJar', jarArchiveFile.get().asFile.absolutePath
-        systemProperty 'tapetum.classpathDir', cpDirPath
-        systemProperty 'tapetum.extractedJijDir', jijDirPath
+        systemProperty 'tapetum.releasesDir', releasesDirPath
+        systemProperty 'tapetum.apiLayer', apiLayer
+        def reqAll = findProperty('requireAllReleases') ?: System.getProperty('tapetum.requireAllReleases')
+        if (reqAll != null) {
+            systemProperty 'tapetum.requireAllReleases', reqAll.toString()
+        }
     }
 }
 

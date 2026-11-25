@@ -1,4 +1,12 @@
 {
+  "1.20.1": {
+    "java": 17,
+    "api": "v120",
+    "loaders": ["fabric", "forge"],
+    "forge": "47.4.20",
+    "range": "[1.20.1,1.21)",
+    "fabric_range": "~1.20.1"
+  },
   "1.21.1": {
     "java": 21,
     "api": "v121",
@@ -6,5 +14,29 @@
     "neo": "21.1.250",
     "range": "[1.21.1,1.21.2)",
     "fabric_range": "~1.21.1"
+  },
+  "26.1.2": {
+    "java": 25,
+    "api": "v26_1",
+    "loaders": ["fabric", "neoforge"],
+    "neo": "26.1.2.99",
+    "range": "[26.1.2,26.2)",
+    "fabric_range": "~26.1.2"
+  },
+  "26.2": {
+    "java": 25,
+    "api": "v26_2",
+    "loaders": ["fabric", "neoforge"],
+    "neo": "26.2.0.69",
+    "range": "[26.2,26.3)",
+    "fabric_range": "~26.2"
+  },
+  "26.3": {
+    "java": 25,
+    "api": "v26_3",
+    "loaders": ["fabric", "neoforge"],
+    "neo": "26.3.0.115",
+    "range": "[26.3,26.4)",
+    "fabric_range": "~26.3"
   }
 }

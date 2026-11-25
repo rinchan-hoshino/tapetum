@@ -2,8 +2,10 @@
 
 | Feature | Description | Module |
 | --- | --- | --- |
-| Iris 54B Direct Writer | Direct 54-byte vertex writer for Iris shader entity pipelines | `common` |
-| Mesh Pre-baking Cache | Pre-bakes high-poly entity/block-entity meshes to reduce per-frame CPU overhead | `common` |
-| Mod Adapters | Built-in adapters for GeckoLib, TaCZ, Touhou Little Maid, SlashBlade Resharped | `common` |
-| Config Screen | In-game `TapetumConfigScreen` showing active writer status, adapters, and pre-baked mesh count | `common` |
-| NeoForge & Fabric Loaders | Dual-loader entrypoints and packaging for Minecraft 1.21.1 | `neoforge`, `fabric` |
+| Iris/Oculus 54B Direct Writer | Direct 54-byte off-heap vertex writer for Iris/Oculus shader entity pipelines across 1.20.1, 1.21.1, 26.1.2, 26.2, and 26.3 | `common` (`v120`, `v121`, `v26_1`, `v26_2`, `v26_3`) |
+| Mesh Pre-baking Cache | Pre-bakes vanilla `ModelPart.Cube` and high-poly entity/block-entity meshes with per-quad mid-UV and tangent math | `common` |
+| Fast-path Enchanted Glint | Pass-through `VertexBufferWriter` on `VertexMultiConsumer$Double` (1.20.1, 1.21.1, 26.1.2) | `common` |
+| Smart Shadow Culling | Skips redundant decorative entity and detail-layer shadow passes during Iris/Oculus shadow rendering | `common` |
+| Mod Adapters (1.21.1) | Built-in optional adapters for GeckoLib 4, AzureLib, TaCZ, Touhou Little Maid, SimpleBedrockModel, Kaleidoscope Doll, and SlashBlade Resharped | `common` (`v121`), `neoforge` (`v121`) |
+| Config Screen | In-game `TapetumConfigScreen` (`GuiGraphics` on 1.20.1/1.21.1, `GuiGraphicsExtractor` on 26.x) with live diagnostics | `common` |
+| Multi-Loader Entrypoints | Fabric, Forge (1.20.1 with `pack_format=15`), and NeoForge (1.21.1 & 26.x) | `fabric`, `forge`, `neoforge` |

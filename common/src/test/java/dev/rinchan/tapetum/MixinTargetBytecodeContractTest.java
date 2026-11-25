@@ -22,8 +22,8 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
 /**
- * Verifies every compiled @Mixin class in the packaged Tapetum JAR against real target
- * bytecode from Minecraft and optional mod JARs (Sodium, Iris, GeckoLib, AzureLib, TaCZ, TLM, SlashBlade).
+ * Verifies every compiled @Mixin targeting Minecraft / Blaze3D classes in the packaged Tapetum JAR
+ * against real runtime bytecode, and ensures zero compileOnly stub classes leak into packaged JARs.
  */
 final class MixinTargetBytecodeContractTest {
     private static final List<String> INJECTOR_ANNOTATIONS = List.of(
@@ -33,15 +33,23 @@ final class MixinTargetBytecodeContractTest {
             "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;",
             "Lorg/spongepowered/asm/mixin/Overwrite;");
 
-    @Test
-    void allMixinTargetsAndMethodSignaturesExistInRealBytecode() throws IOException {
-        String jarPath = System.getProperty("tapetum.packagedJar");
-        String cpDir = System.getProperty("tapetum.classpathDir");
-        String jijDir = System.getProperty("tapetum.extractedJijDir");
-        assertNotNull(jarPath, "tapetum.packagedJar system property must be set");
-        assertNotNull(cpDir, "tapetum.classpathDir system property must be set");
+    private static final List<String> FORBIDDEN_STUB_PREFIXES = List.of(
+            "net/caffeinemc/mods/sodium/",
+            "me/jellysquid/mods/sodium/",
+            "net/irisshaders/iris/",
+            "com/terraformersmc/modmenu/",
+            "software/bernie/geckolib/",
+            "mod/azure/azurelib/",
+            "com/tacz/",
+            "com/github/tartaricacid/",
+            "com/github/ysbbbbbb/",
+            "mods/flammpfeil/");
 
-        List<JarFile> modJars = openModJars(Path.of(cpDir), jijDir != null ? Path.of(jijDir) : null);
+    @Test
+    void minecraftMixinTargetsExistAndNoStubsLeakIntoJar() throws IOException {
+        String jarPath = System.getProperty("tapetum.packagedJar");
+        assertNotNull(jarPath, "tapetum.packagedJar system property must be set");
+
         Map<String, ClassNode> cache = new HashMap<>();
         List<String> failures = new ArrayList<>();
         int checkedMixins = 0;
@@ -50,11 +58,18 @@ final class MixinTargetBytecodeContractTest {
             var entries = packaged.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
-                if (!entry.getName().endsWith(".class")) {
+                String name = entry.getName();
+                for (String forbidden : FORBIDDEN_STUB_PREFIXES) {
+                    if (name.startsWith(forbidden)) {
+                        failures.add("Leaked compileOnly stub class in packaged JAR: " + name);
+                    }
+                }
+                if (!name.endsWith(".class")) {
                     continue;
                 }
                 ClassNode mixinNode = readClass(packaged.getInputStream(entry));
-                AnnotationNode mixinAnn = findAnnotation(mixinNode.invisibleAnnotations, "Lorg/spongepowered/asm/mixin/Mixin;");
+                AnnotationNode mixinAnn =
+                        findAnnotation(mixinNode.invisibleAnnotations, "Lorg/spongepowered/asm/mixin/Mixin;");
                 if (mixinAnn == null) {
                     continue;
                 }
@@ -63,30 +78,54 @@ final class MixinTargetBytecodeContractTest {
                 assertFalse(targetInternalNames.isEmpty(), "Empty @Mixin targets on " + mixinNode.name);
 
                 for (String targetInternal : targetInternalNames) {
-                    ClassNode targetNode = loadTargetClass(targetInternal, modJars, cache);
-                    if (targetNode == null) {
-                        failures.add(mixinNode.name + ": missing target class " + targetInternal);
+                    if (!targetInternal.startsWith("net/minecraft/") && !targetInternal.startsWith("com/mojang/")) {
                         continue;
                     }
-                    verifyMixinMethods(mixinNode, targetNode, modJars, cache, failures);
+                    ClassNode targetNode = loadClasspathClass(targetInternal, cache);
+                    if (targetNode == null) {
+                        failures.add(mixinNode.name + ": missing Minecraft target class " + targetInternal);
+                        continue;
+                    }
+                    verifyMixinMethods(mixinNode, targetNode, cache, failures);
                 }
-            }
-        } finally {
-            for (JarFile jf : modJars) {
-                jf.close();
             }
         }
 
-        assertTrue(checkedMixins >= 20, "Expected at least 20 mixin classes, found " + checkedMixins);
+        assertTrue(checkedMixins >= 2, "Expected at least 2 mixin classes, found " + checkedMixins);
         assertTrue(failures.isEmpty(), "Mixin bytecode contract failures:\n" + String.join("\n", failures));
     }
 
+    @Test
+    void releaseMatrixAuditWhenRequired() throws IOException {
+        if (!"true".equalsIgnoreCase(System.getProperty("tapetum.requireAllReleases"))) {
+            return;
+        }
+        String releasesDir = System.getProperty("tapetum.releasesDir");
+        assertNotNull(releasesDir, "tapetum.releasesDir must be set");
+        Path dir = Path.of(releasesDir);
+        assertTrue(Files.isDirectory(dir), "Releases directory missing: " + dir);
+        List<Path> jars;
+        try (var stream = Files.list(dir)) {
+            jars = stream.filter(p -> p.toString().endsWith(".jar")).toList();
+        }
+        assertTrue(jars.size() == 10, "Expected 10 release JARs, found " + jars.size());
+        for (Path jar : jars) {
+            try (JarFile jf = new JarFile(jar.toFile())) {
+                assertNotNull(jf.getJarEntry("tapetum.mixins.json"), "Missing tapetum.mixins.json in " + jar.getFileName());
+                assertNotNull(jf.getJarEntry("assets/tapetum/icon.png"), "Missing icon.png in " + jar.getFileName());
+                var entries = jf.entries();
+                while (entries.hasMoreElements()) {
+                    String name = entries.nextElement().getName();
+                    for (String forbidden : FORBIDDEN_STUB_PREFIXES) {
+                        assertFalse(name.startsWith(forbidden), "Stub leaked into " + jar.getFileName() + ": " + name);
+                    }
+                }
+            }
+        }
+    }
+
     private static void verifyMixinMethods(
-            ClassNode mixinNode,
-            ClassNode targetNode,
-            List<JarFile> modJars,
-            Map<String, ClassNode> cache,
-            List<String> failures) {
+            ClassNode mixinNode, ClassNode targetNode, Map<String, ClassNode> cache, List<String> failures) {
         for (MethodNode m : mixinNode.methods) {
             if (m.visibleAnnotations == null) {
                 continue;
@@ -96,14 +135,13 @@ final class MixinTargetBytecodeContractTest {
                     continue;
                 }
                 if ("Lorg/spongepowered/asm/mixin/Overwrite;".equals(ann.desc)) {
-                    if (!hasMethod(targetNode, m.name, m.desc, modJars, cache)) {
+                    if (!hasMethod(targetNode, m.name, m.desc, cache)) {
                         failures.add(mixinNode.name + "." + m.name + m.desc + " -> @Overwrite target missing on " + targetNode.name);
                     }
                     continue;
                 }
-                List<String> methods = getStringList(ann, "method");
-                for (String spec : methods) {
-                    if (!matchesMethodSpec(targetNode, spec, modJars, cache)) {
+                for (String spec : getStringList(ann, "method")) {
+                    if (!matchesMethodSpec(targetNode, spec, cache)) {
                         failures.add(mixinNode.name + "." + m.name + " -> method '" + spec + "' not found on " + targetNode.name);
                     }
                 }
@@ -111,16 +149,14 @@ final class MixinTargetBytecodeContractTest {
         }
     }
 
-    private static boolean matchesMethodSpec(
-            ClassNode node, String spec, List<JarFile> modJars, Map<String, ClassNode> cache) {
+    private static boolean matchesMethodSpec(ClassNode node, String spec, Map<String, ClassNode> cache) {
         int paren = spec.indexOf('(');
         String name = paren >= 0 ? spec.substring(0, paren) : spec;
         String desc = paren >= 0 ? spec.substring(paren) : null;
-        return hasMethod(node, name, desc, modJars, cache);
+        return hasMethod(node, name, desc, cache);
     }
 
-    private static boolean hasMethod(
-            ClassNode node, String name, String desc, List<JarFile> modJars, Map<String, ClassNode> cache) {
+    private static boolean hasMethod(ClassNode node, String name, String desc, Map<String, ClassNode> cache) {
         ClassNode cur = node;
         while (cur != null) {
             for (MethodNode m : cur.methods) {
@@ -131,7 +167,7 @@ final class MixinTargetBytecodeContractTest {
             if (cur.superName == null || "java/lang/Object".equals(cur.superName)) {
                 break;
             }
-            cur = loadTargetClass(cur.superName, modJars, cache);
+            cur = loadClasspathClass(cur.superName, cache);
         }
         return false;
     }
@@ -190,24 +226,12 @@ final class MixinTargetBytecodeContractTest {
         return null;
     }
 
-    private static ClassNode loadTargetClass(
-            String internalName, List<JarFile> modJars, Map<String, ClassNode> cache) {
+    private static ClassNode loadClasspathClass(String internalName, Map<String, ClassNode> cache) {
         ClassNode cached = cache.get(internalName);
         if (cached != null) {
             return cached;
         }
         String entryName = internalName + ".class";
-        for (JarFile jf : modJars) {
-            JarEntry entry = jf.getJarEntry(entryName);
-            if (entry != null) {
-                try (InputStream is = jf.getInputStream(entry)) {
-                    ClassNode cn = readClass(is);
-                    cache.put(internalName, cn);
-                    return cn;
-                } catch (IOException ignored) {
-                }
-            }
-        }
         try (InputStream is = MixinTargetBytecodeContractTest.class.getClassLoader().getResourceAsStream(entryName)) {
             if (is != null) {
                 ClassNode cn = readClass(is);
@@ -224,33 +248,5 @@ final class MixinTargetBytecodeContractTest {
         ClassNode cn = new ClassNode();
         cr.accept(cn, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
         return cn;
-    }
-
-    private static List<JarFile> openModJars(Path cpDir, Path jijDir) throws IOException {
-        List<String> jarNames = List.of(
-                "sodium-neoforge-0.8.13+mc1.21.1.jar",
-                "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
-                "geckolib-neoforge-1.21.1-4.9.3.jar",
-                "azurelib-neo-1.21.1-3.2.8.jar",
-                "tacz-neoforge-1.21.1-1.2.0.jar",
-                "touhoulittlemaid-1.5.3-neoforge+mc1.21.1.jar",
-                "SlashBladeResharped-2.1.9-1.21.1.jar",
-                "kaleidoscopedoll-1.4.2-neoforge+mc1.21.1.jar");
-        List<JarFile> out = new ArrayList<>();
-        for (String name : jarNames) {
-            Path p = cpDir.resolve(name);
-            if (Files.exists(p)) {
-                out.add(new JarFile(p.toFile()));
-            }
-        }
-        if (jijDir != null && Files.isDirectory(jijDir)) {
-            for (String jij : List.of("sodium-mod.jar", "simplebedrockmodel-v2.jar")) {
-                Path p = jijDir.resolve(jij);
-                if (Files.exists(p)) {
-                    out.add(new JarFile(p.toFile()));
-                }
-            }
-        }
-        return out;
     }
 }

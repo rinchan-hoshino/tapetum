@@ -19,16 +19,15 @@ import org.objectweb.asm.Opcodes;
 
 /**
  * Ensures Dedicated Server entrypoints and shared server-safe classes never reference
- * client-only Minecraft, Sodium, Iris, or Blaze3D vertex classes.
+ * client-only Minecraft, Sodium, Iris, or Blaze3D/RenderPearl vertex classes.
  */
 final class SideIsolationContractTest {
-    private static final List<String> SERVER_SAFE_CLASSES = List.of(
+    private static final List<String> BASE_SERVER_SAFE_CLASSES = List.of(
             "dev/rinchan/tapetum/Tapetum.class",
             "dev/rinchan/tapetum/config/TapetumConfig.class",
             "dev/rinchan/tapetum/config/TapetumConfig$Data.class",
             "dev/rinchan/tapetum/mixin/TapetumMixinPlugin.class",
             "dev/rinchan/tapetum/neoforge/TapetumNeoForge.class",
-            "dev/rinchan/tapetum/neoforge/TlmEntityMixinAdjuster.class",
             "dev/rinchan/tapetum/geometry/MeshCacheRegistry.class",
             "dev/rinchan/tapetum/hygiene/FrameClock.class",
             "dev/rinchan/tapetum/hygiene/TaCZThermalFastState.class");
@@ -37,16 +36,22 @@ final class SideIsolationContractTest {
             "net/minecraft/client/",
             "net/irisshaders/iris/",
             "net/caffeinemc/mods/sodium/",
-            "com/mojang/blaze3d/vertex/");
+            "com/mojang/blaze3d/vertex/",
+            "com/mojang/renderpearl/api/vertex/");
 
     @Test
     void serverSafeClassesContainZeroClientOnlyReferences() throws IOException {
         String jarPath = System.getProperty("tapetum.packagedJar");
         assertNotNull(jarPath, "tapetum.packagedJar system property must be set");
 
+        List<String> classesToCheck = new ArrayList<>(BASE_SERVER_SAFE_CLASSES);
+        if ("v121".equals(System.getProperty("tapetum.apiLayer"))) {
+            classesToCheck.add("dev/rinchan/tapetum/neoforge/TlmEntityMixinAdjuster.class");
+        }
+
         List<String> leaks = new ArrayList<>();
         try (JarFile jar = new JarFile(jarPath)) {
-            for (String classEntry : SERVER_SAFE_CLASSES) {
+            for (String classEntry : classesToCheck) {
                 JarEntry entry = jar.getJarEntry(classEntry);
                 assertNotNull(entry, "Expected class in packaged jar: " + classEntry);
                 try (InputStream is = jar.getInputStream(entry)) {
@@ -58,24 +63,26 @@ final class SideIsolationContractTest {
     }
 
     @Test
-    void commonMixinPackageSeparatesServerSafeAndClientOnlyMixins() throws IOException {
+    void commonMixinPackageContainsExpectedMixins() throws IOException {
         String jarPath = System.getProperty("tapetum.packagedJar");
         assertNotNull(jarPath, "tapetum.packagedJar system property must be set");
 
-        List<String> clientOnlyMixins = new ArrayList<>();
+        List<String> mixins = new ArrayList<>();
         try (JarFile jar = new JarFile(jarPath)) {
             var entries = jar.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
                 if (name.startsWith("dev/rinchan/tapetum/mixin/") && name.endsWith("Mixin.class")) {
-                    clientOnlyMixins.add(name);
+                    mixins.add(name);
                 }
             }
         }
-        assertFalse(clientOnlyMixins.isEmpty());
-        // Verify TapetumMixinPlugin only includes TlmEntityBroomBboxMixin on non-client side
-        assertTrue(clientOnlyMixins.contains("dev/rinchan/tapetum/mixin/tlm/TlmEntityBroomBboxMixin.class"));
+        assertFalse(mixins.isEmpty());
+        assertTrue(mixins.contains("dev/rinchan/tapetum/mixin/vanilla/VanillaCubeFastMixin.class"));
+        if ("v121".equals(System.getProperty("tapetum.apiLayer"))) {
+            assertTrue(mixins.contains("dev/rinchan/tapetum/mixin/tlm/TlmEntityBroomBboxMixin.class"));
+        }
     }
 
     private static void scanForClientReferences(String owner, InputStream is, List<String> leaks) throws IOException {

@@ -136,6 +136,25 @@ public final class FastEntityVertexWriter {
             short entityId,
             short blockEntityId,
             short itemId,
+            long dstBasePtr) {
+        return writeQuadsToBuffer(
+                mesh, startQuad, quadCount, poseMat, normalMat, light, overlay, abgr,
+                format54B, entityId, blockEntityId, itemId, false, 0f, 0f, 0f, dstBasePtr);
+    }
+
+    public static int writeQuadsToBuffer(
+            BakedQuadMesh mesh,
+            int startQuad,
+            int quadCount,
+            Matrix4f poseMat,
+            Matrix3f normalMat,
+            int light,
+            int overlay,
+            int abgr,
+            boolean format54B,
+            short entityId,
+            short blockEntityId,
+            short itemId,
             boolean useFixedNormal,
             float fixedNx,
             float fixedNy,
