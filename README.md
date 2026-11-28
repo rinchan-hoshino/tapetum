@@ -28,6 +28,19 @@ Without shaders, Sodium and Embeddium write entity cubes straight into compact 3
 
 ![Tapetum Settings & Live Status](docs/screenshots/02-config-screen.png)
 
+## Performance
+
+Tapetum targets **CPU-side entity, armor, and block-entity vertex emission** when shaders are active — specifically pre-baking local normals, `midUV`, and Iris-compatible tangents once per model and streaming transformed 54-byte vertices directly into off-heap buffers. It does not touch GPU shaders, chunk meshing, lighting, or world generation.
+
+In our reproducible JUnit throughput benchmark (`FastEntityVertexWriterBenchmarkTest`, 256-quad / 1,024-vertex mesh × 10,000 iterations = 2.56M quads / 10.24M vertices per trial, median of 5 trials after warmup):
+
+| Path (54-byte Iris extended entity layout) | Throughput | Median Time | Relative Speed |
+| :--- | :--- | :--- | :--- |
+| Per-frame quad normal / `midUV` / tangent recomputation | `22.20 M quads/s` (`88.79 M verts/s`) | `115.32 ms` | `1.00x` |
+| **Tapetum** (`BakedQuadMesh` + `FastEntityVertexWriter`) | **`48.70 M quads/s`** (`194.80 M verts/s`) | **`52.57 ms`** | **`2.19x`** |
+
+In real modded scenes with heavy entity/armor/gun models under Iris or Oculus, Tapetum additionally eliminates per-vertex `VertexConsumer` dispatch overhead, temporary vector allocations, and redundant shadow-pass draws.
+
 ## Configuration
 
 Configure in-game or edit `config/tapetum.json`:
@@ -46,7 +59,8 @@ Configure in-game or edit `config/tapetum.json`:
 }
 ```
 
-## Compatibility & Requirements
+## Compatibility
 
-- **Client performance mod** (safe to leave in server mod folders — client rendering hooks never load on dedicated servers).
-- **No hard dependencies**: Designed for **Sodium / Embeddium** + **Iris / Oculus Shaders**, and safely idles if installed without shaders or without any of the supported content mods.
+- **Client-only performance mod**: Safe to leave in server mod folders — client rendering hooks never load on dedicated servers, and no hard dependencies are required (Tapetum safely idles if shaders or optional content mods are absent).
+- **Sodium / Embeddium & Iris / Oculus**: Built specifically to pair with Sodium/Embeddium's off-heap `VertexBufferWriter` and Iris/Oculus's 54-byte extended shader vertex format, keeping both intact and falling back gracefully to standard `VertexConsumer` whenever a custom wrapper or unknown format is encountered.
+- **ScalableLux, Starlight, Moonrise & C2ME**: Fully compatible and orthogonal. Those mods optimize chunk lighting, chunk scheduling, and multithreaded world generation, whereas Tapetum only optimizes client-side entity and block-entity quad/tangent emission on the render thread — their mixin targets and runtime paths do not overlap.
