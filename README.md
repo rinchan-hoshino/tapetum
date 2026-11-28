@@ -32,16 +32,19 @@ Without shaders, Sodium and Embeddium write entity cubes straight into compact 3
 
 Tapetum targets **CPU-side entity, armor, and block-entity vertex emission** when shaders are active, pre-baking local normals, `midUV`, and Iris-compatible tangents once per model and streaming transformed 54-byte vertices directly into off-heap buffers. It does not touch GPU shaders, chunk meshing, lighting, or world generation.
 
-![Tapetum v1.1.1 Real-World Shader FPS Benchmark](https://raw.githubusercontent.com/rinchan-hoshino/tapetum/main/docs/screenshots/03-fps-benchmark.png)
+![In-Game F3 & Frametime Graph Comparison (Without Tapetum vs With Tapetum v1.1.1)](https://raw.githubusercontent.com/rinchan-hoshino/tapetum/main/docs/screenshots/03-ingame-frametime.png)
+
+*Same world, fixed camera (`XYZ: 2.0 / -55.2 / 238.5`), and Complementary Unbound `r5.10` (`HIGH`, `1600×900`, `Apple M1 Pro`, `1.21.1` NeoForge, Sodium `0.8.13`, Iris `1.8.14-beta.1`, captured after 15 s warmup + 10 s steady-state): in Scene 2 (64 Touhou Little Maids + 48 Enchanted SlashBlade Stands + 64 Kaleidoscope Dolls), the native `F3+2` frametime graph drops from **`27 fps` (`36 ms avg`, `p99.5 = 6 fps`)** without Tapetum to **`50 fps` (`20 ms avg`, `p99.5 = 40 fps`)** with Tapetum `v1.1.1`.*
 
 ### Real-World In-Game Shader Benchmark (A/B)
 
-Measured back-to-back on an identical world and fixed camera (`Apple M1 Pro`, `1708×960`, Minecraft `1.21.1` NeoForge, Sodium `0.8.13`, Iris `1.8.14-beta.1`, Complementary Unbound `r5.10`, 8 s warmup + 10–15 s capture):
+Measured back-to-back on the same world and fixed camera (`Apple M1 Pro`, Minecraft `1.21.1` NeoForge, Sodium `0.8.13`, Iris `1.8.14-beta.1`, Complementary Unbound `r5.10`):
 
 | Scene | Baseline Avg FPS | Tapetum `v1.1.1` Avg FPS | Avg Gain | Baseline 1% Low | Tapetum `v1.1.1` 1% Low |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Scene 1**: 240 Enchanted Armor Stands (Diamond & Netherite + Shields + Swords) | `17.6 FPS` | **`23.3 FPS`** | **`+32.5%` (`1.33x`)** | `5.1 FPS` | **`5.9 FPS`** |
-| **Scene 2**: 176 High-Poly Modded Entities (64 Touhou Little Maids + 48 Enchanted SlashBlade Stands + 64 Kaleidoscope Dolls) | `24.6 FPS` | **`64.8 FPS`** | **`+163.4%` (`2.63x`)** | `7.8 FPS` | **`9.8 FPS`** |
+| **Scene 1** (`1708×960`, HUD hidden): 240 Enchanted Armor Stands (Diamond & Netherite + Shields + Swords) | `17.6 FPS` | **`23.3 FPS`** | **`+32.5%` (`1.33x`)** | `5.1 FPS` | **`5.9 FPS`** |
+| **Scene 2** (`1708×960`, HUD hidden): 176 High-Poly Modded Entities (64 Touhou Little Maids + 48 Enchanted SlashBlade Stands + 64 Kaleidoscope Dolls) | `24.6 FPS` | **`64.8 FPS`** | **`+163.4%` (`2.63x`)** | `7.8 FPS` | **`9.8 FPS`** |
+| **Scene 2** (`1600×900`, native `F3+2` overlay shown above): 176 High-Poly Modded Entities | `28.1 FPS` (`35.6 ms`) | **`50.8 FPS`** (`19.7 ms`) | **`+81.0%` (`1.81x`)** | `17.9 FPS` | **`31.3 FPS`** |
 
 ### Reproducible 54-Byte Vertex Emission Microbenchmark
 
