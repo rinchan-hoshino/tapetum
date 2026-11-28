@@ -236,6 +236,47 @@ public final class BakedQuadMesh {
             return this;
         }
 
+        public void captureOffHeapQuads(long ptr, int count, int stride) {
+            flushPendingVertex();
+            if (count <= 0 || (stride != EntityVertexLayout.STRIDE_36B && stride != EntityVertexLayout.STRIDE_54B)) {
+                return;
+            }
+            int quads = count / 4;
+            for (int q = 0; q < quads; q++) {
+                long p0 = ptr + (long) (q * 4) * stride;
+                long p1 = p0 + stride;
+                long p2 = p1 + stride;
+                long p3 = p2 + stride;
+                float x0 = MemoryUtil.memGetFloat(p0), y0 = MemoryUtil.memGetFloat(p0 + 4L), z0 = MemoryUtil.memGetFloat(p0 + 8L);
+                float x1 = MemoryUtil.memGetFloat(p1), y1 = MemoryUtil.memGetFloat(p1 + 4L), z1 = MemoryUtil.memGetFloat(p1 + 8L);
+                float x2 = MemoryUtil.memGetFloat(p2), y2 = MemoryUtil.memGetFloat(p2 + 4L), z2 = MemoryUtil.memGetFloat(p2 + 8L);
+                float x3 = MemoryUtil.memGetFloat(p3), y3 = MemoryUtil.memGetFloat(p3 + 4L), z3 = MemoryUtil.memGetFloat(p3 + 8L);
+                int packedNormal = MemoryUtil.memGetInt(p0 + EntityVertexLayout.OFFSET_NORMAL);
+                float nx = EntityVertexLayout.unpackNormX(packedNormal);
+                float ny = EntityVertexLayout.unpackNormY(packedNormal);
+                float nz = EntityVertexLayout.unpackNormZ(packedNormal);
+                if (nx * nx + ny * ny + nz * nz <= 1e-12f) {
+                    float e1x = x1 - x0, e1y = y1 - y0, e1z = z1 - z0;
+                    float e2x = x2 - x0, e2y = y2 - y0, e2z = z2 - z0;
+                    nx = e1y * e2z - e1z * e2y;
+                    ny = e1z * e2x - e1x * e2z;
+                    nz = e1x * e2y - e1y * e2x;
+                    if (nx * nx + ny * ny + nz * nz <= 1e-12f) {
+                        float e3x = x3 - x0, e3y = y3 - y0, e3z = z3 - z0;
+                        nx = e2y * e3z - e2z * e3y;
+                        ny = e2z * e3x - e2x * e3z;
+                        nz = e2x * e3y - e2y * e3x;
+                    }
+                }
+                addQuad(
+                        x0, y0, z0, MemoryUtil.memGetFloat(p0 + 16L), MemoryUtil.memGetFloat(p0 + 20L),
+                        x1, y1, z1, MemoryUtil.memGetFloat(p1 + 16L), MemoryUtil.memGetFloat(p1 + 20L),
+                        x2, y2, z2, MemoryUtil.memGetFloat(p2 + 16L), MemoryUtil.memGetFloat(p2 + 20L),
+                        x3, y3, z3, MemoryUtil.memGetFloat(p3 + 16L), MemoryUtil.memGetFloat(p3 + 20L),
+                        nx, ny, nz);
+            }
+        }
+
         @Override
         public VertexConsumer setNormal(PoseStack.Pose pose, float nx, float ny, float nz) {
             Matrix3f normalMat = pose.normal();
@@ -289,27 +330,7 @@ public final class BakedQuadMesh {
                     && stride != EntityVertexLayout.STRIDE_54B) {
                 return;
             }
-            int quads = count / 4;
-            for (int q = 0; q < quads; q++) {
-                long p0 = ptr + (long) (q * 4) * stride;
-                long p1 = p0 + stride;
-                long p2 = p1 + stride;
-                long p3 = p2 + stride;
-                int packedNormal = MemoryUtil.memGetInt(p0 + EntityVertexLayout.OFFSET_NORMAL);
-                float nx = EntityVertexLayout.unpackNormX(packedNormal);
-                float ny = EntityVertexLayout.unpackNormY(packedNormal);
-                float nz = EntityVertexLayout.unpackNormZ(packedNormal);
-                addQuad(
-                        MemoryUtil.memGetFloat(p0), MemoryUtil.memGetFloat(p0 + 4L), MemoryUtil.memGetFloat(p0 + 8L),
-                        MemoryUtil.memGetFloat(p0 + 16L), MemoryUtil.memGetFloat(p0 + 20L),
-                        MemoryUtil.memGetFloat(p1), MemoryUtil.memGetFloat(p1 + 4L), MemoryUtil.memGetFloat(p1 + 8L),
-                        MemoryUtil.memGetFloat(p1 + 16L), MemoryUtil.memGetFloat(p1 + 20L),
-                        MemoryUtil.memGetFloat(p2), MemoryUtil.memGetFloat(p2 + 4L), MemoryUtil.memGetFloat(p2 + 8L),
-                        MemoryUtil.memGetFloat(p2 + 16L), MemoryUtil.memGetFloat(p2 + 20L),
-                        MemoryUtil.memGetFloat(p3), MemoryUtil.memGetFloat(p3 + 4L), MemoryUtil.memGetFloat(p3 + 8L),
-                        MemoryUtil.memGetFloat(p3 + 16L), MemoryUtil.memGetFloat(p3 + 20L),
-                        nx, ny, nz);
-            }
+            captureOffHeapQuads(ptr, count, stride);
         }
     }
 }

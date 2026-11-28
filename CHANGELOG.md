@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] - 2026-11-28
+
+### Fixed
+- Fixed dark/black vanilla `ModelPart.Cube` entities and armor under Iris/Oculus shaders when paired with Sodium 0.8.13+: first-time cube baking now uses `BakedQuadMesh.plainBuilder()` (full-precision vanilla face normals, avoiding Sodium's identity normal-matrix cache returning zero normals), and `SodiumCaptureBuilder` now falls back to cross-product face normal recovery whenever unpacked vertex normals are zero across all 5 API layers (`1.20.1`, `1.21.1`, `26.1.2`, `26.2`, `26.3`).
+- Eliminated `VertexMultiConsumer$Double` mixin method-override warning with Sodium 0.8.13+ by splitting `FormatAwareWriter` into an always-on `VertexMultiConsumerFormatMixin` and only enabling `VertexMultiConsumerFastMixin` when Sodium does not ship its own `VertexMultiConsumerMixin$DoubleMixin`.
+
 ## [1.1.0] - 2026-11-25
 
 ### Added

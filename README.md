@@ -6,9 +6,9 @@
 
 **Accelerates entity, armor, and high-poly modded model rendering when running shaders with Sodium/Embeddium and Iris/Oculus.**
 
-Named after the *tapetum lucidum* — the reflective crystal layer behind a cat's iris — **Tapetum** eliminates the per-frame CPU bottleneck that happens when Minecraft entities and high-poly mod models are drawn into Iris and Oculus extended shader vertex buffers.
+Named after the *tapetum lucidum*, the reflective crystal layer behind a cat's iris, **Tapetum** removes the per-frame CPU bottleneck that happens when Minecraft entities and high-poly mod models are drawn into Iris and Oculus extended shader vertex buffers.
 
-![Tapetum with Shaders Active](docs/screenshots/01-shader-entities-scene.png)
+![Tapetum with Shaders Active](https://raw.githubusercontent.com/rinchan-hoshino/tapetum/main/docs/screenshots/01-shader-entities-scene.png)
 
 ## Why Frame Rates Drop Around Entities With Shaders
 
@@ -26,20 +26,31 @@ Without shaders, Sodium and Embeddium write entity cubes straight into compact 3
 - **Smart shadow-pass culling**: Skips redundant shadow draws for tiny decorative overlays, distant detail layers, and static display blocks beyond a configurable radius while keeping primary character silhouettes intact.
 - **Live status & per-module toggles**: Open the config screen via Mod Menu (Fabric) or the Mods list (Forge & NeoForge) to see whether the direct shader writer is active, which mod adapters are loaded, and how many meshes are currently pre-baked.
 
-![Tapetum Settings & Live Status](docs/screenshots/02-config-screen.png)
+![Tapetum Settings & Live Status](https://raw.githubusercontent.com/rinchan-hoshino/tapetum/main/docs/screenshots/02-config-screen.png)
 
 ## Performance
 
-Tapetum targets **CPU-side entity, armor, and block-entity vertex emission** when shaders are active — specifically pre-baking local normals, `midUV`, and Iris-compatible tangents once per model and streaming transformed 54-byte vertices directly into off-heap buffers. It does not touch GPU shaders, chunk meshing, lighting, or world generation.
+Tapetum targets **CPU-side entity, armor, and block-entity vertex emission** when shaders are active, pre-baking local normals, `midUV`, and Iris-compatible tangents once per model and streaming transformed 54-byte vertices directly into off-heap buffers. It does not touch GPU shaders, chunk meshing, lighting, or world generation.
 
-In our reproducible JUnit throughput benchmark (`FastEntityVertexWriterBenchmarkTest`, 256-quad / 1,024-vertex mesh × 10,000 iterations = 2.56M quads / 10.24M vertices per trial, median of 5 trials after warmup):
+![Tapetum v1.1.1 Real-World Shader FPS Benchmark](https://raw.githubusercontent.com/rinchan-hoshino/tapetum/main/docs/screenshots/03-fps-benchmark.png)
+
+### Real-World In-Game Shader Benchmark (A/B)
+
+Measured back-to-back on an identical world and fixed camera (`Apple M1 Pro`, `1708×960`, Minecraft `1.21.1` NeoForge, Sodium `0.8.13`, Iris `1.8.14-beta.1`, Complementary Unbound `r5.10`, 8 s warmup + 10–15 s capture):
+
+| Scene | Baseline Avg FPS | Tapetum `v1.1.1` Avg FPS | Avg Gain | Baseline 1% Low | Tapetum `v1.1.1` 1% Low |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Scene 1**: 240 Enchanted Armor Stands (Diamond & Netherite + Shields + Swords) | `17.6 FPS` | **`23.3 FPS`** | **`+32.5%` (`1.33x`)** | `5.1 FPS` | **`5.9 FPS`** |
+| **Scene 2**: 176 High-Poly Modded Entities (64 Touhou Little Maids + 48 Enchanted SlashBlade Stands + 64 Kaleidoscope Dolls) | `24.6 FPS` | **`64.8 FPS`** | **`+163.4%` (`2.63x`)** | `7.8 FPS` | **`9.8 FPS`** |
+
+### Reproducible 54-Byte Vertex Emission Microbenchmark
+
+In the JUnit throughput benchmark (`FastEntityVertexWriterBenchmarkTest`, 256-quad / 1,024-vertex mesh × 10,000 iterations = 2.56M quads / 10.24M vertices per trial, median of 5 trials after warmup):
 
 | Path (54-byte Iris extended entity layout) | Throughput | Median Time | Relative Speed |
 | :--- | :--- | :--- | :--- |
 | Per-frame quad normal / `midUV` / tangent recomputation | `22.20 M quads/s` (`88.79 M verts/s`) | `115.32 ms` | `1.00x` |
 | **Tapetum** (`BakedQuadMesh` + `FastEntityVertexWriter`) | **`48.70 M quads/s`** (`194.80 M verts/s`) | **`52.57 ms`** | **`2.19x`** |
-
-In real modded scenes with heavy entity/armor/gun models under Iris or Oculus, Tapetum additionally eliminates per-vertex `VertexConsumer` dispatch overhead, temporary vector allocations, and redundant shadow-pass draws.
 
 ## Configuration
 
@@ -61,6 +72,6 @@ Configure in-game or edit `config/tapetum.json`:
 
 ## Compatibility
 
-- **Client-only performance mod**: Safe to leave in server mod folders — client rendering hooks never load on dedicated servers, and no hard dependencies are required (Tapetum safely idles if shaders or optional content mods are absent).
+- **Client-only performance mod**: Safe to leave in server mod folders. Client rendering hooks never load on dedicated servers, and no hard dependencies are required (Tapetum safely idles if shaders or optional content mods are absent).
 - **Sodium / Embeddium & Iris / Oculus**: Built specifically to pair with Sodium/Embeddium's off-heap `VertexBufferWriter` and Iris/Oculus's 54-byte extended shader vertex format, keeping both intact and falling back gracefully to standard `VertexConsumer` whenever a custom wrapper or unknown format is encountered.
-- **ScalableLux, Starlight, Moonrise & C2ME**: Fully compatible and orthogonal. Those mods optimize chunk lighting, chunk scheduling, and multithreaded world generation, whereas Tapetum only optimizes client-side entity and block-entity quad/tangent emission on the render thread — their mixin targets and runtime paths do not overlap.
+- **ScalableLux, Starlight, Moonrise & C2ME**: Fully compatible and orthogonal. Those mods optimize chunk lighting, chunk scheduling, and multithreaded world generation, whereas Tapetum only optimizes client-side entity and block-entity quad/tangent emission on the render thread, so their mixin targets and runtime paths do not overlap.

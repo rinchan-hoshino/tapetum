@@ -12,6 +12,8 @@ import org.spongepowered.asm.service.MixinService;
 
 public final class TapetumMixinPlugin implements IMixinConfigPlugin {
     private static final String SODIUM_WRITER = "net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter";
+    private static final String SODIUM_MULTI_CONSUMER =
+            "net.caffeinemc.mods.sodium.mixin.core.render.immediate.consumer.VertexMultiConsumerMixin$DoubleMixin";
     private static final String IRIS_SHADOW = "net.irisshaders.iris.shadows.ShadowRenderer";
 
     @Override
@@ -39,7 +41,10 @@ public final class TapetumMixinPlugin implements IMixinConfigPlugin {
         if (hasAll(SODIUM_WRITER)) {
             mixins.add("vanilla.BufferBuilderFormatAccessor");
             mixins.add("vanilla.VanillaCubeFastMixin");
-            mixins.add("vanilla.VertexMultiConsumerFastMixin");
+            mixins.add("vanilla.VertexMultiConsumerFormatMixin");
+            if (!hasAll(SODIUM_MULTI_CONSUMER)) {
+                mixins.add("vanilla.VertexMultiConsumerFastMixin");
+            }
         }
         if (hasAll(IRIS_SHADOW)) {
             mixins.add("shadow.DecorativeEntityShadowMixin");

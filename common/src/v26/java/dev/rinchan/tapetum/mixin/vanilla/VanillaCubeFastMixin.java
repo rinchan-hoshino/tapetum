@@ -54,7 +54,7 @@ public abstract class VanillaCubeFastMixin {
         if (mesh == null || this.tapetum$bakedEpoch != epoch) {
             this.tapetum$baking = true;
             try {
-                BakedQuadMesh.Builder builder = BakedQuadMesh.builder();
+                BakedQuadMesh.Builder builder = BakedQuadMesh.plainBuilder();
                 this.compile(new PoseStack().last(), builder, packedLight, packedOverlay, -1);
                 mesh = builder.build();
                 this.tapetum$bakedMesh = mesh;

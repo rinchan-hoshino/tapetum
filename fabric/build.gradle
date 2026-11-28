@@ -7,6 +7,16 @@ def root = rootProject
 def unobfuscated = root.minecraft_version.startsWith('26.')
 apply plugin: unobfuscated ? 'net.fabricmc.fabric-loom' : 'fabric-loom'
 
+if (unobfuscated) {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.lwjgl' && details.requested.version?.contains('-mojang-')) {
+                details.useVersion(details.requested.version.substring(0, details.requested.version.indexOf('-mojang-')))
+            }
+        }
+    }
+}
+
 loom.interfaceInjection.getIsEnabled().set(false)
 
 def modId = root.property('mod_id')
